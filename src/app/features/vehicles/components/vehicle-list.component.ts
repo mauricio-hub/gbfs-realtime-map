@@ -1,23 +1,25 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { VehicleStore } from '../../../core/state/vehicle.store';
 import { MapService } from '../../map/services/map.service';
 import { VehicleDetailComponent } from './vehicle-detail.component';
+import { VehicleFilterComponent } from './vehicle-filter.component';
 
 @Component({
   selector: 'app-vehicle-list',
   standalone: true,
-  imports: [VehicleDetailComponent],
+  imports: [VehicleDetailComponent, VehicleFilterComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="panel">
       <div class="panel-header">
         <h2>Vehicles</h2>
-        <span class="count">{{ store.vehicles().length }}</span>
+        <span class="count">{{ store.filteredVehicles().length }}</span>
       </div>
 
+      <app-vehicle-filter />
+
       <div class="list">
-        @for (vehicle of store.vehicles(); track vehicle.id) {
+        @for (vehicle of store.filteredVehicles(); track vehicle.id) {
           <div
             class="list-item"
             [class.selected]="store.selectedId() === vehicle.id"
