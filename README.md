@@ -1,59 +1,58 @@
-# GbfsRealtimeMap
+# GBFS Realtime Map
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.19.
+An Angular 21 app that visualizes bikes and scooters from a GBFS feed on an interactive map.
 
-## Development server
+## Features
 
-To start a local development server, run:
+- Real-time vehicle positions from the Citi Bike GBFS feed (auto-refreshes every 30 seconds)
+- Interactive map powered by MapLibre GL + OpenStreetMap tiles
+- Click a vehicle on the map or list to select it and fly to its location
+- Filter vehicles by status: All / Available / Reserved / Disabled
+- Loading and error states in the sidebar
+
+## Getting started
 
 ```bash
+npm install
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Open `http://localhost:4200`
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Running tests
 
 ```bash
-ng generate component component-name
+npx vitest run
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Architecture
 
-```bash
-ng generate --help
+```
+src/app/
+  core/
+    adapters/   # Translates raw GBFS JSON → domain Vehicle[]
+    models/     # Vehicle interface and types
+    services/   # HTTP polling service (timer + switchMap, 30s interval)
+    state/      # VehicleStore — signals, computed filters, selection
+    mocks/      # Dev-only mock data (used when API returns 0 vehicles)
+  features/
+    map/        # MapLibre map component and service (HTML markers, no worker)
+    vehicles/   # Sidebar list, detail panel, filter buttons
+  __tests__/    # Unit tests (Vitest)
 ```
 
-## Building
+## Key decisions
 
-To build the project run:
+**MapLibre HTML Markers over GeoJSON layers** — avoids the MapLibre worker dependency, which caused rendering issues in the Angular build pipeline.
 
-```bash
-ng build
-```
+**OpenStreetMap raster tiles** — no API key required, works out of the box.
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+**Angular Signals** — used throughout instead of RxJS subjects for UI state. Simpler, no manual subscription management.
 
-## Running unit tests
+**OnPush change detection** — all components use `ChangeDetectionStrategy.OnPush` for better performance.
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+**Dev mock data** — when the Citi Bike API returns an empty feed (docked system, bikes rarely appear in `free_bike_status`), the app falls back to 10 mock vehicles near Central Park so the UI is always demonstrable.
 
-```bash
-ng test
-```
+## AI usage
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+AI tools were used during development as a reference and learning aid (documentation lookup, syntax guidance, and debugging support). All architectural decisions, code structure, and implementation were driven by the developer.
