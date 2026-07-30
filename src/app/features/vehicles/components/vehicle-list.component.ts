@@ -1,10 +1,13 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { VehicleStore } from '../../../core/state/vehicle.store';
 import { MapService } from '../../map/services/map.service';
+import { VehicleDetailComponent } from './vehicle-detail.component';
 
 @Component({
   selector: 'app-vehicle-list',
   standalone: true,
+  imports: [VehicleDetailComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="panel">
@@ -32,6 +35,7 @@ import { MapService } from '../../map/services/map.service';
           <p class="empty">No vehicles available</p>
         }
       </div>
+      <app-vehicle-detail />
     </div>
   `,
   styles: [`
