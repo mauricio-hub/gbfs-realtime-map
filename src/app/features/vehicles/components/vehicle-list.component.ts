@@ -19,24 +19,36 @@ import { VehicleFilterComponent } from './vehicle-filter.component';
       <app-vehicle-filter />
 
       <div class="list">
-        @for (vehicle of store.filteredVehicles(); track vehicle.id) {
-          <div
-            class="list-item"
-            [class.selected]="store.selectedId() === vehicle.id"
-            (click)="select(vehicle.id)"
-          >
-            <span class="dot" [attr.data-status]="vehicle.status"></span>
-            <div class="info">
-              <span class="id">{{ vehicle.id }}</span>
-              <span class="status">{{ vehicle.status }}</span>
-            </div>
+        @if (store.status() === 'loading') {
+          <div class="state-msg">
+            <span class="spinner"></span>
+            Loading vehicles…
           </div>
-        }
+        } @else if (store.status() === 'error') {
+          <div class="state-msg error">
+            ⚠ Could not load vehicles.<br>Retrying…
+          </div>
+        } @else {
+          @for (vehicle of store.filteredVehicles(); track vehicle.id) {
+            <div
+              class="list-item"
+              [class.selected]="store.selectedId() === vehicle.id"
+              (click)="select(vehicle.id)"
+            >
+              <span class="dot" [attr.data-status]="vehicle.status"></span>
+              <div class="info">
+                <span class="id">{{ vehicle.id }}</span>
+                <span class="status">{{ vehicle.status }}</span>
+              </div>
+            </div>
+          }
 
-        @if (store.vehicles().length === 0) {
-          <p class="empty">No vehicles available</p>
+          @if (store.filteredVehicles().length === 0) {
+            <p class="empty">No vehicles match this filter</p>
+          }
         }
       </div>
+
       <app-vehicle-detail />
     </div>
   `,
@@ -86,9 +98,28 @@ import { VehicleFilterComponent } from './vehicle-filter.component';
     .dot[data-status="reserved"]  { background: #f59e0b; }
     .dot[data-status="disabled"]  { background: #ef4444; }
     .info { display: flex; flex-direction: column; gap: 2px; }
-    .id { font-size: 13px; font-weight: 500; }
+    .id   { font-size: 13px; font-weight: 500; }
     .status { font-size: 11px; color: #a6adc8; text-transform: capitalize; }
     .empty { padding: 24px 16px; color: #a6adc8; font-size: 13px; }
+    .state-msg {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 16px;
+      color: #a6adc8;
+      font-size: 13px;
+    }
+    .state-msg.error { color: #f38ba8; }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #45475a;
+      border-top-color: #cdd6f4;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   `],
 })
 export class VehicleListComponent {
