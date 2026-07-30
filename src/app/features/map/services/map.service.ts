@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import * as maplibregl from 'maplibre-gl';
-import { GeoJSONSource, LngLatLike, Map as MapLibreMap } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker } from 'maplibre-gl';
 import { Subject } from 'rxjs';
-import { Vehicle } from '../../../core/models/vehicle.model';
+import { Vehicle, VehicleStatus } from '../../../core/models/vehicle.model';
 
-const SOURCE_ID = 'vehicles';
-const LAYER_VEHICLES = 'layer-vehicles';
-const LAYER_SELECTED = 'layer-vehicles-selected';
+const STATUS_COLOR: Record<VehicleStatus, string> = {
+  available: '#22c55e',
+  reserved:  '#f59e0b',
+  disabled:  '#ef4444',
+};
 
 const MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -23,128 +25,108 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
 
 @Injectable({ providedIn: 'root' })
 export class MapService {
-    private map: MapLibreMap | null = null;
-    private mapReady = false;
-    private pendingVehicles: Vehicle[] | null = null;
+  private map: MapLibreMap | null = null;
+  private mapReady = false;
+  private pendingVehicles: Vehicle[] | null = null;
 
-    private readonly _vehicleClick$ = new Subject<string>();
-    readonly vehicleClick$ = this._vehicleClick$.asObservable();
+  // Reuse markers — never recreate on each tick
+  private readonly markers = new Map<string, Marker>();
 
-    initMap(container: HTMLElement): void {
-        maplibregl.setWorkerUrl('assets/maplibre-gl-worker.mjs');
-        this.map = new MapLibreMap({
-            container,
-            style: MAP_STYLE,
-            center: [-73.98, 40.75],
-            zoom: 12,
-        });
+  private readonly _vehicleClick$ = new Subject<string>();
+  readonly vehicleClick$ = this._vehicleClick$.asObservable();
 
-        this.map.on('load', () => {
-            this.addSource();
-            this.addLayers();
-            this.bindEvents();
-            this.mapReady = true;
-            if (this.pendingVehicles) {
-                this.updateVehicles(this.pendingVehicles);
-                this.pendingVehicles = null;
-            }
-        });
+  initMap(container: HTMLElement): void {
+    maplibregl.setWorkerUrl('assets/maplibre-gl-worker.mjs');
+    this.map = new MapLibreMap({
+      container,
+      style: MAP_STYLE,
+      center: [-73.98, 40.75],
+      zoom: 12,
+    });
+
+    this.map.on('load', () => {
+      this.mapReady = true;
+      if (this.pendingVehicles) {
+        this.updateVehicles(this.pendingVehicles);
+        this.pendingVehicles = null;
+      }
+    });
+  }
+
+  updateVehicles(vehicles: Vehicle[]): void {
+    if (!this.map || !this.mapReady) {
+      this.pendingVehicles = vehicles;
+      return;
     }
 
-    updateVehicles(vehicles: Vehicle[]): void {
-        if (!this.map || !this.mapReady) {
-            this.pendingVehicles = vehicles;
-            return;
-        }
+    const incomingIds = new Set(vehicles.map(v => v.id));
 
-        const source = this.map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-        if (!source) return;
-
-        source.setData({
-            type: 'FeatureCollection',
-            features: vehicles.map((v) => ({
-                type: 'Feature',
-                id: v.id,
-                geometry: { type: 'Point', coordinates: [v.lon, v.lat] },
-                properties: { id: v.id, status: v.status },
-            })),
-        });
+    // Remove markers no longer in the feed
+    for (const [id, marker] of this.markers) {
+      if (!incomingIds.has(id)) {
+        marker.remove();
+        this.markers.delete(id);
+      }
     }
 
-    selectVehicle(id: string | null, flyTo = false): void {
-        if (!this.map || !this.mapReady) return;
+    // Add new markers or update existing ones (no recreation)
+    for (const vehicle of vehicles) {
+      const existing = this.markers.get(vehicle.id);
+      if (existing) {
+        existing.setLngLat([vehicle.lon, vehicle.lat]);
+      } else {
+        const el = this.createMarkerEl(vehicle);
+        const marker = new Marker({ element: el })
+          .setLngLat([vehicle.lon, vehicle.lat])
+          .addTo(this.map!);
+        this.markers.set(vehicle.id, marker);
+      }
+    }
+  }
 
-        this.map.setFilter(LAYER_SELECTED, ['==', ['get', 'id'], id ?? '']);
-
-        if (flyTo && id) {
-            const features = this.map.querySourceFeatures(SOURCE_ID, {
-                filter: ['==', ['get', 'id'], id],
-            });
-            const geom = features[0]?.geometry;
-            if (geom?.type === 'Point') {
-                this.map.flyTo({ center: geom.coordinates as LngLatLike, zoom: 15 });
-            }
-        }
+  selectVehicle(id: string | null, flyTo = false): void {
+    for (const [markerId, marker] of this.markers) {
+      const el = marker.getElement();
+      const isSelected = markerId === id;
+      el.style.width  = isSelected ? '18px' : '14px';
+      el.style.height = isSelected ? '18px' : '14px';
+      el.style.backgroundColor = isSelected
+        ? '#3b82f6'
+        : STATUS_COLOR[el.dataset['status'] as VehicleStatus] ?? '#6b7280';
+      el.style.zIndex = isSelected ? '1' : '0';
     }
 
-    destroy(): void {
-        this.map?.remove();
-        this.map = null;
-        this.mapReady = false;
+    if (flyTo && id) {
+      const marker = this.markers.get(id);
+      if (marker) {
+        this.map!.flyTo({ center: marker.getLngLat(), zoom: 15 });
+      }
     }
+  }
 
-    private addSource(): void {
-        this.map!.addSource(SOURCE_ID, {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] },
-        });
-    }
+  destroy(): void {
+    this.markers.forEach(m => m.remove());
+    this.markers.clear();
+    this.map?.remove();
+    this.map = null;
+    this.mapReady = false;
+  }
 
-    private addLayers(): void {
-        this.map!.addLayer({
-            id: LAYER_VEHICLES,
-            type: 'circle',
-            source: SOURCE_ID,
-            paint: {
-                'circle-radius': 7,
-                'circle-color': [
-                    'match', ['get', 'status'],
-                    'available', '#22c55e',
-                    'reserved', '#f59e0b',
-                    'disabled', '#ef4444',
-                    '#6b7280',
-                ],
-                'circle-stroke-width': 1,
-                'circle-stroke-color': '#ffffff',
-            },
-        });
-
-        this.map!.addLayer({
-            id: LAYER_SELECTED,
-            type: 'circle',
-            source: SOURCE_ID,
-            filter: ['==', ['get', 'id'], ''],
-            paint: {
-                'circle-radius': 11,
-                'circle-color': '#3b82f6',
-                'circle-stroke-width': 2,
-                'circle-stroke-color': '#ffffff',
-            },
-        });
-    }
-
-    private bindEvents(): void {
-        this.map!.on('click', LAYER_VEHICLES, (e) => {
-            const id = e.features?.[0]?.properties?.['id'];
-            if (id) this._vehicleClick$.next(id);
-        });
-
-        this.map!.on('mouseenter', LAYER_VEHICLES, () => {
-            this.map!.getCanvas().style.cursor = 'pointer';
-        });
-
-        this.map!.on('mouseleave', LAYER_VEHICLES, () => {
-            this.map!.getCanvas().style.cursor = '';
-        });
-    }
+  private createMarkerEl(vehicle: Vehicle): HTMLElement {
+    const el = document.createElement('div');
+    el.dataset['id'] = vehicle.id;
+    el.dataset['status'] = vehicle.status;
+    el.style.cssText = `
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background-color: ${STATUS_COLOR[vehicle.status]};
+      border: 2px solid #ffffff;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      transition: width 0.15s, height 0.15s;
+    `;
+    el.addEventListener('click', () => this._vehicleClick$.next(vehicle.id));
+    return el;
+  }
 }
