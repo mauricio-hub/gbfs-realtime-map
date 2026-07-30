@@ -1,14 +1,16 @@
-import { Component, inject, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MapComponent } from './features/map/components/map.component';
+import { VehicleListComponent } from './features/vehicles/components/vehicle-list.component';
 import { VehicleStore } from './core/state/vehicle.store';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MapComponent],
+  imports: [MapComponent, VehicleListComponent],
   template: `
     <div class="app-layout">
+      <app-vehicle-list />
       <app-map />
     </div>
   `,
