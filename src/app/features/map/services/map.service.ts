@@ -3,6 +3,7 @@ import * as maplibregl from 'maplibre-gl';
 import { Map as MapLibreMap, Marker } from 'maplibre-gl';
 import { Subject } from 'rxjs';
 import { Vehicle, VehicleStatus } from '../../../core/models/vehicle.model';
+import { DEFAULT_FEED } from '../../../core/config/feeds.config';
 
 const STATUS_COLOR: Record<VehicleStatus, string> = {
   available: '#22c55e',
@@ -40,8 +41,8 @@ export class MapService {
     this.map = new MapLibreMap({
       container,
       style: MAP_STYLE,
-      center: [-73.98, 40.75],
-      zoom: 12,
+      center: DEFAULT_FEED.center,
+      zoom: DEFAULT_FEED.zoom,
     });
 
     this.map.on('load', () => {
