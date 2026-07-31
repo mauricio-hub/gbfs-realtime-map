@@ -1,13 +1,13 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { VehicleStore } from '../../../core/state/vehicle.store';
 import { MapService } from '../../map/services/map.service';
-import { VehicleDetailComponent } from './vehicle-detail.component';
 import { VehicleFilterComponent } from './vehicle-filter.component';
+import { FeedSearchComponent } from './feed-search.component';
 
 @Component({
   selector: 'app-vehicle-list',
   standalone: true,
-  imports: [VehicleDetailComponent, VehicleFilterComponent],
+  imports: [VehicleFilterComponent, FeedSearchComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="panel">
@@ -16,6 +16,7 @@ import { VehicleFilterComponent } from './vehicle-filter.component';
         <span class="count">{{ store.filteredVehicles().length }}</span>
       </div>
 
+      <app-feed-search />
       <app-vehicle-filter />
 
       <div class="list">
@@ -49,7 +50,6 @@ import { VehicleFilterComponent } from './vehicle-filter.component';
         }
       </div>
 
-      <app-vehicle-detail />
     </div>
   `,
   styles: [`

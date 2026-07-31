@@ -55,4 +55,4 @@ src/app/
 
 ## AI usage
 
-AI tools were used during development as a reference and learning aid (documentation lookup, syntax guidance, and debugging support). All architectural decisions, code structure, and implementation were driven by the developer.
+AI tools were used during development as a learning and productivity aid — specifically for Angular syntax guidance (new to the framework), debugging compiler errors, and exploring the GBFS ecosystem to identify public feed URLs. Core decisions around architecture, component design, state management with signals, and the multi-feed feature concept were driven by the developer. All code was read, understood, and validated before being integrated.

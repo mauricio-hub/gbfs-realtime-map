@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Vehicle, VehicleStatus } from '../models/vehicle.model';
 import { VehicleDataService } from '../services/vehicle-data.service';
+import { DEFAULT_FEED, FeedConfig } from '../config/feeds.config';
 
 export type LoadingState = 'idle' | 'loading' | 'error';
 export type StatusFilter = 'all' | VehicleStatus;
@@ -15,11 +16,13 @@ export class VehicleStore {
   private readonly _selectedId = signal<string | null>(null);
   private readonly _status     = signal<LoadingState>('loading');
   private readonly _filter     = signal<StatusFilter>('all');
+  private readonly _activeFeed = signal<FeedConfig>(DEFAULT_FEED);
 
   // --- public read-only ---
   readonly selectedId = this._selectedId.asReadonly();
   readonly status     = this._status.asReadonly();
   readonly filter     = this._filter.asReadonly();
+  readonly activeFeed = this._activeFeed.asReadonly();
 
   // All vehicles (unfiltered) — used by the map
   readonly vehicles = this._vehicles.asReadonly();
@@ -50,5 +53,13 @@ export class VehicleStore {
 
   setFilter(filter: StatusFilter): void {
     this._filter.set(filter);
+  }
+
+  setFeed(feed: FeedConfig): void {
+    this._activeFeed.set(feed);
+    this._vehicles.set([]);
+    this._selectedId.set(null);
+    this._status.set('loading');
+    this.dataService.setFeedUrl(feed.url);
   }
 }

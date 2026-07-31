@@ -104,6 +104,10 @@ export class MapService {
     }
   }
 
+  flyTo(center: [number, number], zoom: number): void {
+    this.map?.flyTo({ center, zoom });
+  }
+
   destroy(): void {
     this.markers.forEach(m => m.remove());
     this.markers.clear();

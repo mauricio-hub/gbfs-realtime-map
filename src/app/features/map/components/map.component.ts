@@ -11,16 +11,28 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MapService } from '../services/map.service';
 import { VehicleStore } from '../../../core/state/vehicle.store';
+import { VehicleBannerComponent } from '../../vehicles/components/vehicle-banner.component';
 
 @Component({
   selector: 'app-map',
   standalone: true,
+  imports: [VehicleBannerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div #mapContainer class="map-container"></div>`,
+  template: `
+    <div class="map-host">
+      <div #mapContainer class="map-container"></div>
+      <app-vehicle-banner />
+    </div>
+  `,
   styles: [`
     :host {
       display: block;
       flex: 1;
+      height: 100%;
+    }
+    .map-host {
+      position: relative;
+      width: 100%;
       height: 100%;
     }
     .map-container {
